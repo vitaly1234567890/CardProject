@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button'
 export function App() {
   return (
     <div>
-      <p>Hi!</p>
-      <Button as={'a'} href={'/link'} variant={'secondary'}>
-        Hello
+      {/*<Button href={'https://yandex.ru'}>Hello</Button>*/}
+      <Button as={'a'} href={'https://yandex.ru'}>
+        Hello Ivan
       </Button>
     </div>
   )
