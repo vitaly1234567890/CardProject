@@ -1,12 +1,14 @@
 import { Outlet } from 'react-router-dom'
 
-import { Header } from '@/components/ui/header/header'
+import s from './app.module.scss'
+
+import { Toast } from './components/ui/toast'
 
 export function App() {
   return (
-    <div>
-      <Header />
+    <div className={s.app}>
       <Outlet />
+      <Toast />
     </div>
   )
 }

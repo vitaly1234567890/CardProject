@@ -11,7 +11,7 @@ export type User = {
 export type LoginArgs = {
   email: string
   password: string
-  rememberMe: boolean
+  rememberMe?: boolean
 }
 
 export type SignUpArgs = {
@@ -37,6 +37,11 @@ export type ResendCheckEmailArgs = {
   html?: string
   subject?: string
   userId: string
+}
+
+export type CreateNewPasswordArgs = {
+  password: string
+  token: string
 }
 
 export type RecoverPasswordArgs = Pick<SignUpArgs, 'email' | 'html' | 'subject'>
