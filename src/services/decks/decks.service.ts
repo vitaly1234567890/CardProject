@@ -1,4 +1,5 @@
 import { baseApi } from '@/services/baseApi'
+import { CardItem } from '@/services/deck/deck.types'
 import {
   CreateDecks,
   Deck,
@@ -7,6 +8,8 @@ import {
   GetDecksArgs,
   GetMaxMinCard,
   IdDecks,
+  PostCardGrade,
+  RandomCardLearn,
 } from '@/services/decks/decks.types'
 
 const decksService = baseApi.injectEndpoints({
@@ -14,11 +17,23 @@ const decksService = baseApi.injectEndpoints({
     return {
       createDeck: builder.mutation<Deck, CreateDecks>({
         invalidatesTags: ['Decks'],
-        query: arg => ({
-          body: arg,
-          method: 'POST',
-          url: `v1/decks`,
-        }),
+        query: args => {
+          const formData = new FormData()
+
+          formData.append('name', args.name)
+          if (args.isPrivate) {
+            formData.append('isPrivate', args.isPrivate.toString())
+          }
+          if (args.cover) {
+            formData.append('cover', args.cover)
+          }
+
+          return {
+            body: formData,
+            method: 'POST',
+            url: `v1/decks`,
+          }
+        },
       }),
       deleteDeck: builder.mutation<Deck, IdDecks>({
         invalidatesTags: ['Decks'],
@@ -42,13 +57,44 @@ const decksService = baseApi.injectEndpoints({
         providesTags: ['Decks'],
         query: ({ id }) => `v1/decks/${id}`,
       }),
+      getRandomCardLearn: builder.query<CardItem, RandomCardLearn>({
+        providesTags: ['Decks'],
+        query: ({ id, ...args }) => {
+          return {
+            params: args,
+            url: `v1/decks/${id}/learn`,
+          }
+        },
+      }),
+      postCardGrade: builder.mutation<CardItem, PostCardGrade>({
+        invalidatesTags: ['Decks'],
+        query: ({ id, ...args }) => {
+          return {
+            body: args,
+            method: 'POST',
+            url: `v1/decks/${id}/learn`,
+          }
+        },
+      }),
       updateDeck: builder.mutation<Deck, EditDecks>({
         invalidatesTags: ['Decks'],
-        query: ({ id, ...data }) => ({
-          body: data,
-          method: 'PATCH',
-          url: `v1/decks/${id}`,
-        }),
+        query: ({ id, ...args }) => {
+          const formData = new FormData()
+
+          formData.append('name', args.name)
+          if (args.isPrivate) {
+            formData.append('isPrivate', args.isPrivate.toString())
+          }
+          if (args.cover) {
+            formData.append('cover', args.cover)
+          }
+
+          return {
+            body: formData,
+            method: 'PATCH',
+            url: `v1/decks/${id}`,
+          }
+        },
       }),
     }
   },
@@ -60,6 +106,8 @@ export const {
   useGetDecksQuery,
   useGetMaxMinCardsQuery,
   useGetOneDeckQuery,
+  useGetRandomCardLearnQuery,
+  usePostCardGradeMutation,
   useUpdateDeckMutation,
 } = decksService
 

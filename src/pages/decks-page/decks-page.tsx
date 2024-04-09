@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 
 import { Icons } from '@/assets/icons/Icons'
 import { DecksTable } from '@/components/decks'
@@ -6,66 +7,134 @@ import { DeckDialog } from '@/components/decks/deck-dialog/deck-dialog'
 import { Button } from '@/components/ui/button'
 import { Pagination } from '@/components/ui/pagination'
 import { Slider } from '@/components/ui/slider'
+import { Spinner } from '@/components/ui/spinner'
 import { TabSwitcher, TabType } from '@/components/ui/tabSwitcher'
+import { Sort } from '@/components/ui/table/tableSort'
 import { TextField } from '@/components/ui/textField'
+import { Toast } from '@/components/ui/toast'
 import { Typography } from '@/components/ui/typography'
+import { useGetMeQuery } from '@/services/auth'
 import {
   useCreateDeckMutation,
-  useDeleteDeckMutation,
   useGetDecksQuery,
   useGetMaxMinCardsQuery,
-  useUpdateDeckMutation,
 } from '@/services/decks/decks.service'
-import { CreateDecks, EditDecks } from '@/services/decks/decks.types'
+import { CreateDecks } from '@/services/decks/decks.types'
 
 import s from './decks-page.module.scss'
 
 const tabs: TabType[] = [
-  { content: <div>My Cards</div>, title: 'My Cards', value: 'Tab 1' },
-  { content: <div>All Cards</div>, title: 'All Cards', value: 'Tab 2' },
+  { content: <div></div>, title: 'My Cards', value: 'my card' },
+  { content: <div></div>, title: 'All Cards', value: 'Tab 2' },
 ]
 
 export const DecksPage = () => {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [perPageItem, setPerPageItem] = useState<number | string>(10)
-  const [minMaxCard, setMinMaxCard] = useState<number[]>([0, 100])
+  const [sortKey, setSortKey] = useState<string | undefined>('')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [switcher, setSwitcher] = useState('')
+
+  const { data: maxMinCard } = useGetMaxMinCardsQuery()
+  const [minCardCount, setMinCardCount] = useState<number>(maxMinCard?.min ?? 0)
+  const [maxCardCount, setMaxCardCount] = useState<number>(maxMinCard?.max ?? 100)
+
+  const { data: me } = useGetMeQuery()
 
   const { data, error, isError, isLoading } = useGetDecksQuery({
+    authorId: switcher === tabs[0].value ? me?.id : undefined,
     currentPage: page,
     itemsPerPage: perPageItem,
-    maxCardsCount: minMaxCard[1],
-    minCardsCount: minMaxCard[0],
+    maxCardsCount: maxCardCount,
+    minCardsCount: minCardCount,
     name: search,
+    orderBy: sortKey ? `${sortKey}-${sortDirection}` : undefined,
   })
   const [createDecks] = useCreateDeckMutation()
-  const [deleteDecks] = useDeleteDeckMutation()
-  const [editDecks] = useUpdateDeckMutation()
-  const { data: maxMinCard } = useGetMaxMinCardsQuery()
 
-  if (isLoading) {
-    return <div>Loading...</div>
+  useEffect(() => {
+    if (maxMinCard) {
+      setMaxCardCount(maxMinCard.max)
+      setMinCardCount(maxMinCard.min)
+    }
+  }, [maxMinCard])
+
+  const createDeck = async (data: CreateDecks) => {
+    const res = await createDecks(data)
+
+    if ('data' in res) {
+      setPage(1)
+      toast.success('Deck created successfully!')
+    }
+    if ('error' in res) {
+      const errorMessage =
+        // @ts-ignore
+        res.error?.data?.errorMessages?.[0]?.message ||
+        // @ts-ignore
+        res.error?.data?.message ||
+        'Unknown error occurred'
+
+      toast.error(`Error creating deck: ${errorMessage}`)
+    }
   }
-  if (isError) {
-    return <div>{JSON.stringify(error)}</div>
-  }
 
-  const deleteDeck = (id: string) => {
-    deleteDecks({ id })
-  }
+  const handleSearch = useCallback((name: string) => {
+    setPage(1)
+    setSearch(name)
+  }, [])
 
-  const createDeck = (data: CreateDecks) => {
-    createDecks(data)
-  }
+  const sliderValue = maxMinCard ? [minCardCount, maxCardCount] : undefined
 
-  const editDeck = (data: EditDecks) => {
-    editDecks(data)
-  }
+  const onChangeValueHandler = useCallback((newValue: number[]) => {
+    setPage(1)
+    setMinCardCount(newValue[0])
+    setMaxCardCount(newValue[1])
+  }, [])
 
-  const sliderValue = maxMinCard ? [maxMinCard.min, maxMinCard.max] : []
+  const handleSort = useCallback(
+    (key: Sort) => {
+      setPage(1)
+      if (key && sortKey === key.sortBy) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+      } else {
+        setSortKey(key ? key.sortBy : undefined)
+        setSortDirection('asc')
+      }
+    },
+    [sortDirection, sortKey]
+  )
 
-  const onChangeValueHandler = (newValue: number[]) => {
-    setMinMaxCard(newValue)
+  const handleSwitcher = useCallback((value: string) => {
+    setPage(1)
+    setSwitcher(value)
+  }, [])
+
+  const handleClearFilter = useCallback(() => {
+    setSearch('')
+    setSwitcher('')
+    setSortKey('')
+    setSortDirection('asc')
+    setPage(1)
+    setPerPageItem(10)
+    setMinCardCount(0)
+    setMaxCardCount(maxMinCard?.max ?? 100)
+  }, [maxMinCard?.max])
+
+  useEffect(
+    () => {
+      if (isError) {
+        // @ts-ignore
+        const errorMessage = error?.data.errorMessages[0]?.message || 'Unknown error occurred'
+
+        toast.error(`Error getting decks: ${errorMessage}`)
+      }
+    }, // @ts-ignore
+    [isError, error?.data.errorMessages]
+  )
+
+  if (isLoading || !maxMinCard) {
+    return <Spinner />
   }
 
   return (
@@ -77,33 +146,32 @@ export const DecksPage = () => {
       <div className={s.filteredEl}>
         <TextField
           className={s.input}
-          onValueChange={setSearch}
+          onValueChange={handleSearch}
           placeholder={'Input search'}
           type={'text'}
+          value={search}
         />
         <div className={s.tab}>
-          <TabSwitcher tabs={tabs} title={'Show decks cards'} />
+          <TabSwitcher
+            defaultValue={tabs[1]?.value}
+            onValueChange={handleSwitcher}
+            tabs={tabs}
+            title={'Show decks cards'}
+            value={switcher}
+          />
         </div>
         <div className={s.slider}>
           <Typography variant={'body2'}>Number of cards</Typography>
-          <Slider
-            ariaLabelMax={String(minMaxCard[1])}
-            ariaLabelMin={String(minMaxCard[0])}
-            onValueChange={onChangeValueHandler}
-            value={sliderValue}
-          />
+          <Slider max={maxMinCard?.max} onValueChange={onChangeValueHandler} value={sliderValue} />
         </div>
-        <div className={s.btn}>
-          <Button variant={'secondary'}>
-            <Icons iconId={'decksList-delete'} /> Clear Filter
-          </Button>
-        </div>
+        <Button onClick={handleClearFilter} variant={'secondary'}>
+          <Icons iconId={'decksList-delete'} /> <span>Clear Filter</span>
+        </Button>
       </div>
       <DecksTable
         decks={data?.items}
-        onDeleteClick={deleteDeck}
-        onEditClick={editDeck}
-        onSort={() => {}}
+        onSort={handleSort}
+        sort={{ direction: sortDirection, sortBy: sortKey }}
       />
       {data && (
         <div className={s.pagination}>
@@ -118,6 +186,7 @@ export const DecksPage = () => {
           />
         </div>
       )}
+      <Toast />
     </div>
   )
 }
