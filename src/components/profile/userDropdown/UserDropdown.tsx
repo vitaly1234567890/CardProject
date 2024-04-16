@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+
 import { Icons } from '@/assets/icons/Icons'
 import AvatarDemo from '@/assets/img/avatarDemo.jpeg'
 import { Avatar } from '@/components/ui/avatar/avatar'
@@ -9,26 +11,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown'
+import { ROUTES } from '@/router/router'
 
 import s from './userDropdown.module.css'
+
 type Props = {
-  avatar?: string
+  avatar?: null | string
   email?: string
+  logout: () => void
   userName?: string
 }
-export const UserDropdown = ({ avatar, email, userName }: Props) => {
+
+export const UserDropdown = ({ avatar, email, logout, userName }: Props) => {
+  const navigate = useNavigate()
+
+  const handleProfileClick = () => {
+    navigate(ROUTES.profile)
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className={s.wrapper}>
         <div>{userName}</div>
-        {/*<Button className={s.trigger}>*/}
         <Avatar src={avatar || AvatarDemo} />
-        {/*</Button>*/}
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuLabel>
           <div>
-            <Avatar src={AvatarDemo} />
+            <Avatar src={avatar || AvatarDemo} />
           </div>
           <div>
             <div>{userName}</div>
@@ -36,11 +46,11 @@ export const UserDropdown = ({ avatar, email, userName }: Props) => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleProfileClick}>
           <Icons iconId={'person-outline'} /> My Profile
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onSelect={logout}>
           <Icons iconId={'log-out-outline'} /> Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
