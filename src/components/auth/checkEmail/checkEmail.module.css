@@ -1,4 +1,4 @@
-.wrapper {
+.form {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -18,4 +18,11 @@
   color: var(--color-light-900);
   text-align: center;
   opacity: 0.5;
+}
+
+.email {
+  display: flex;
+  justify-content: center;
+  color: var(--color-info-300);
+  text-decoration: none;
 }
